@@ -7,6 +7,8 @@ import {
   ChevronRight, Settings, FileText, Home
 } from 'lucide-react';
 
+import logoImg from '../assets/logo.png';
+
 const profesorLinks = [
   { to: '/profesor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/profesor/niveles', icon: GraduationCap, label: 'Niveles Educativos' },
@@ -40,7 +42,7 @@ export default function Sidebar() {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
-        <img src="/src/assets/logo.png" className="sidebar-logo-img" alt="Logo" />
+        <img src={logoImg} className="sidebar-logo-img" alt="Logo" />
         {!collapsed && (
           <div>
             <div className="sidebar-title">Clases Particulares</div>

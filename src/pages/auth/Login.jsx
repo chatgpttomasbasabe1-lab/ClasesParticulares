@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { LogIn } from 'lucide-react';
+import logoImg from '../../assets/logo.png';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -28,7 +29,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card slide-up">
-        <img src="/src/assets/logo.png" className="login-logo-img" alt="Logo" />
+        <img src={logoImg} className="login-logo-img" alt="Logo" />
         <h1>Bienvenido</h1>
         <p className="subtitle">Ingresá tus credenciales para acceder a la plataforma</p>
 
