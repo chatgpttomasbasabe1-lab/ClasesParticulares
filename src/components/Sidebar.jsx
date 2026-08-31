@@ -9,6 +9,8 @@ import {
 
 import logoImg from '../assets/logo.png';
 
+import { Eye } from 'lucide-react';
+
 const profesorLinks = [
   { to: '/profesor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/profesor/niveles', icon: GraduationCap, label: 'Niveles Educativos' },
@@ -19,6 +21,7 @@ const profesorLinks = [
   { to: '/profesor/facturacion', icon: DollarSign, label: 'Facturación' },
   { to: '/profesor/chat', icon: MessageSquare, label: 'Chat' },
   { to: '/profesor/foro', icon: HelpCircle, label: 'Foro' },
+  { to: '/profesor/vista-alumno', icon: Eye, label: 'Vista Alumno' },
 ];
 
 const alumnoLinks = [

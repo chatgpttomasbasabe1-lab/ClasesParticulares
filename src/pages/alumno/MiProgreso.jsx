@@ -4,8 +4,9 @@ import { useAuth } from '../../context/AuthContext';
 import { TrendingUp, CheckCircle, Clock } from 'lucide-react';
 import { ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-export default function MiProgreso() {
-  const { profile } = useAuth();
+export default function MiProgreso({ previewProfile }) {
+  const authContext = useAuth();
+  const profile = previewProfile || authContext.profile;
   const [stats, setStats] = useState({ total: 0, completados: 0, pendientes: 0 });
   const [apartadosProgreso, setApartadosProgreso] = useState([]);
 

@@ -12,6 +12,7 @@ import CalendarioClases from './pages/profesor/CalendarioClases';
 import Facturacion from './pages/profesor/Facturacion';
 import ChatProfesor from './pages/profesor/ChatProfesor';
 import ForoProfesor from './pages/profesor/ForoProfesor';
+import VistaAlumno from './pages/profesor/VistaAlumno';
 import MiContenido from './pages/alumno/MiContenido';
 import MiProgreso from './pages/alumno/MiProgreso';
 import ChatAlumno from './pages/alumno/ChatAlumno';
@@ -112,6 +113,11 @@ export default function App() {
           <Route path="/profesor/foro" element={
             <ProtectedRoute allowedRole="profesor">
               <AppLayout><ForoProfesor /></AppLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/profesor/vista-alumno" element={
+            <ProtectedRoute allowedRole="profesor">
+              <AppLayout><VistaAlumno /></AppLayout>
             </ProtectedRoute>
           } />
 

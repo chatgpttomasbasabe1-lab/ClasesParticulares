@@ -6,8 +6,9 @@ import {
   Download, Upload, CheckCircle, Circle, CheckSquare
 } from 'lucide-react';
 
-export default function MiContenido() {
-  const { profile } = useAuth();
+export default function MiContenido({ previewProfile, isPreview = false }) {
+  const authContext = useAuth();
+  const profile = previewProfile || authContext.profile;
   const [apartados, setApartados] = useState([]);
   const [modulos, setModulos] = useState({});
   const [archivos, setArchivos] = useState({});
@@ -51,6 +52,7 @@ export default function MiContenido() {
   }
 
   async function toggleCompletado(moduloId) {
+    if (isPreview) return;
     const existing = progreso[moduloId];
     if (existing) {
       await supabase.from('progreso_alumno_modulo')
