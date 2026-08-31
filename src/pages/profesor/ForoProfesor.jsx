@@ -26,7 +26,7 @@ export default function ForoProfesor() {
 
   async function loadConsultas() {
     const { data } = await supabase.from('consultas_foro')
-      .select('*, alumnos(nombre, apellido)')
+      .select('*, alumnos(nombre, apellido), modulos(nombre)')
       .eq('nivel_aprendizaje_id', selectedNA.id)
       .order('created_at', { ascending: false });
     setConsultas(data || []);
@@ -113,7 +113,14 @@ export default function ForoProfesor() {
                   {c.alumnos?.nombre?.[0]}{c.alumnos?.apellido?.[0]}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>{c.titulo}</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {c.titulo}
+                    {c.modulo_id && (
+                      <span style={{ fontSize: 10, background: 'var(--info-bg)', color: 'var(--info)', padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>
+                        Módulo: {c.modulos?.nombre}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     {c.alumnos?.nombre} {c.alumnos?.apellido} • {new Date(c.created_at).toLocaleDateString('es-AR')}
                   </div>

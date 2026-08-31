@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight, FolderOpen, FileText, File,
-  Download, Upload, CheckCircle, Circle, CheckSquare
+  Download, Upload, CheckCircle, Circle, CheckSquare, MessageSquare
 } from 'lucide-react';
 
 export default function MiContenido({ previewProfile, isPreview = false }) {
   const authContext = useAuth();
   const profile = previewProfile || authContext.profile;
+  const navigate = useNavigate();
   const [apartados, setApartados] = useState([]);
   const [modulos, setModulos] = useState({});
   const [archivos, setArchivos] = useState({});
@@ -169,6 +171,16 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
                                 <input type="file" hidden accept=".pdf,.png,.jpg,.jpeg,.xls,.xlsx"
                                   onChange={(e) => handleEntrega(mod.id, e)} disabled={uploading} />
                               </label>
+                            )}
+                            {mod.foro_habilitado && (
+                              <button 
+                                className="btn btn-sm" 
+                                style={{ background: 'var(--info-bg)', color: 'var(--info)' }}
+                                onClick={() => !isPreview && navigate(`/alumno/foro?modulo=${mod.id}`)}
+                                disabled={isPreview}
+                              >
+                                <MessageSquare size={14} /> Foro
+                              </button>
                             )}
                           </div>
                         </div>

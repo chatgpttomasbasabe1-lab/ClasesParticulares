@@ -1,27 +1,53 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
+import { useSearchParams } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import { HelpCircle, MessageCircle, Send, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function ForoAlumno() {
   const { profile } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [consultas, setConsultas] = useState([]);
   const [expandedConsulta, setExpandedConsulta] = useState(null);
   const [respuestas, setRespuestas] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ titulo: '', contenido: '' });
+  const [form, setForm] = useState({ titulo: '', contenido: '', modulo_id: '' });
+  const [modulosDisponibles, setModulosDisponibles] = useState([]);
 
   useEffect(() => {
-    if (profile?.nivel_aprendizaje_id) loadConsultas();
+    if (profile?.nivel_aprendizaje_id) {
+      loadConsultas();
+      loadModulosForo();
+    }
   }, [profile]);
+
+  useEffect(() => {
+    const moduloQuery = searchParams.get('modulo');
+    if (moduloQuery) {
+      setForm(prev => ({ ...prev, modulo_id: moduloQuery }));
+      setModalOpen(true);
+      setSearchParams({});
+    }
+  }, [searchParams]);
 
   async function loadConsultas() {
     const { data } = await supabase.from('consultas_foro')
-      .select('*, alumnos(nombre, apellido)')
+      .select('*, alumnos(nombre, apellido), modulos(nombre)')
       .eq('nivel_aprendizaje_id', profile.nivel_aprendizaje_id)
       .order('created_at', { ascending: false });
     setConsultas(data || []);
+  }
+
+  async function loadModulosForo() {
+    const { data: apts } = await supabase.from('apartados').select('id').eq('nivel_aprendizaje_id', profile.nivel_aprendizaje_id);
+    if (!apts || apts.length === 0) return;
+    
+    const { data: mods } = await supabase.from('modulos')
+      .select('id, nombre')
+      .in('apartado_id', apts.map(a => a.id))
+      .eq('foro_habilitado', true);
+    setModulosDisponibles(mods || []);
   }
 
   async function loadRespuestas(consultaId) {
@@ -47,10 +73,11 @@ export default function ForoAlumno() {
       alumno_id: profile.id,
       nivel_aprendizaje_id: profile.nivel_aprendizaje_id,
       titulo: form.titulo,
-      contenido: form.contenido
+      contenido: form.contenido,
+      modulo_id: form.modulo_id ? parseInt(form.modulo_id) : null
     });
     setModalOpen(false);
-    setForm({ titulo: '', contenido: '' });
+    setForm({ titulo: '', contenido: '', modulo_id: '' });
     loadConsultas();
   }
 
@@ -84,7 +111,14 @@ export default function ForoAlumno() {
                   {c.alumnos?.nombre?.[0]}{c.alumnos?.apellido?.[0]}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600 }}>{c.titulo}</div>
+                  <div style={{ fontWeight: 600 }}>
+                    {c.titulo}
+                    {c.modulo_id && (
+                      <span style={{ fontSize: 10, background: 'var(--info-bg)', color: 'var(--info)', padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>
+                        Módulo: {c.modulos?.nombre}
+                      </span>
+                    )}
+                  </div>
                   <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     {c.alumnos?.nombre} {c.alumnos?.apellido} • {new Date(c.created_at).toLocaleDateString('es-AR')}
                     {c.alumno_id === profile.id && (
@@ -134,6 +168,15 @@ export default function ForoAlumno() {
           </>
         }
       >
+        <div className="form-group">
+          <label className="form-label">Asociar a un Módulo (Opcional)</label>
+          <select className="form-input" value={form.modulo_id} onChange={(e) => setForm({ ...form, modulo_id: e.target.value })}>
+            <option value="">Foro General</option>
+            {modulosDisponibles.map(m => (
+              <option key={m.id} value={m.id}>{m.nombre}</option>
+            ))}
+          </select>
+        </div>
         <div className="form-group">
           <label className="form-label">Título</label>
           <input className="form-input" placeholder="Resumen de tu duda..." value={form.titulo}

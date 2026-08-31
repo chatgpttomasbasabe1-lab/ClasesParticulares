@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import Modal from '../../components/Modal';
 import {
   Plus, Edit2, Trash2, FileText, ChevronDown, ChevronRight,
-  Upload, Download, CheckSquare, FolderOpen, File
+  Upload, Download, CheckSquare, FolderOpen, File, MessageSquare
 } from 'lucide-react';
 
 export default function Contenido() {
@@ -96,26 +96,26 @@ export default function Contenido() {
     setEditingItem(null);
     setParentId(apartadoId);
     const existingMods = modulos[apartadoId] || [];
-    setForm({ nombre: '', orden: existingMods.length + 1, requiere_entrega: false });
+    setForm({ nombre: '', orden: existingMods.length + 1, requiere_entrega: false, foro_habilitado: false });
   }
 
   function openEditModulo(mod) {
     setModalType('modulo');
     setEditingItem(mod);
     setParentId(mod.apartado_id);
-    setForm({ nombre: mod.nombre, orden: mod.orden, requiere_entrega: mod.requiere_entrega });
+    setForm({ nombre: mod.nombre, orden: mod.orden, requiere_entrega: mod.requiere_entrega, foro_habilitado: mod.foro_habilitado });
   }
 
   async function saveModulo() {
     if (!form.nombre.trim()) return;
     if (editingItem) {
       await supabase.from('modulos').update({
-        nombre: form.nombre, orden: form.orden, requiere_entrega: form.requiere_entrega
+        nombre: form.nombre, orden: form.orden, requiere_entrega: form.requiere_entrega, foro_habilitado: form.foro_habilitado
       }).eq('id', editingItem.id);
     } else {
       await supabase.from('modulos').insert({
         nombre: form.nombre, apartado_id: parentId, orden: form.orden,
-        requiere_entrega: form.requiere_entrega
+        requiere_entrega: form.requiere_entrega, foro_habilitado: form.foro_habilitado
       });
     }
     setModalType(null);
@@ -248,11 +248,18 @@ export default function Contenido() {
                               <FileText size={16} style={{ color: 'var(--accent-secondary)' }} />
                               <div>
                                 <div style={{ fontWeight: 500, fontSize: 14 }}>{mod.nombre}</div>
-                                <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                                  Orden: {mod.orden}
+                                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                                    Orden: {mod.orden} • Archivos: {(archivos[mod.id] || []).length}
+                                  </span>
                                   {mod.requiere_entrega && (
-                                    <span className="badge badge-warning" style={{ marginLeft: 8, fontSize: 10, padding: '2px 6px' }}>
-                                      <CheckSquare size={10} /> Requiere Entrega
+                                    <span style={{ fontSize: 11, background: 'var(--warning-bg)', color: 'var(--warning)', padding: '0 6px', borderRadius: 4 }}>
+                                      Con Entrega
+                                    </span>
+                                  )}
+                                  {mod.foro_habilitado && (
+                                    <span style={{ fontSize: 11, background: 'var(--info-bg)', color: 'var(--info)', padding: '0 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <MessageSquare size={10} /> Foro
                                     </span>
                                   )}
                                 </div>
@@ -346,6 +353,13 @@ export default function Contenido() {
                 <input type="checkbox" checked={form.requiere_entrega || false}
                   onChange={(e) => setForm({ ...form, requiere_entrega: e.target.checked })} />
                 <span>Requiere entrega de tarea por el alumno</span>
+              </label>
+            </div>
+            <div className="form-group">
+              <label className="form-checkbox">
+                <input type="checkbox" checked={form.foro_habilitado || false}
+                  onChange={(e) => setForm({ ...form, foro_habilitado: e.target.checked })} />
+                <span>Habilitar foro de consultas para este módulo</span>
               </label>
             </div>
           </>
