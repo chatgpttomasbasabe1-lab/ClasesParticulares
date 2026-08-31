@@ -209,7 +209,10 @@ export default function CalendarioClases() {
                     <td>{c.duracion_horas}h</td>
                     <td>${c.costo_calculado?.toLocaleString('es-AR')}</td>
                     <td>
-                      <span className={adge }>
+                      <span className={"badge " + (
+                        c.estado === 'PENDIENTE' ? 'badge-warning' :
+                        c.estado === 'DICTADA' ? 'badge-success' : 'badge-danger'
+                      )}>
                         {c.estado}
                       </span>
                     </td>
