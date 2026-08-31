@@ -1279,5 +1279,5 @@ tr:hover td {
   font-weight: 600;
 }
 
-.login-logo-img { width: 120px; height: auto; margin-bottom: 1.5rem; }
+.login-logo-img { width: 120px; height: auto; margin-bottom: 1.5rem; mix-blend-mode: multiply; }
 .sidebar-logo-img { width: 40px; height: auto; border-radius: 8px; }

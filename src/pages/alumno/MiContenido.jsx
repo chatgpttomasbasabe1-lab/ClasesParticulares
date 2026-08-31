@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight, FolderOpen, FileText, File,
-  Download, Upload, CheckCircle, Circle, CheckSquare, MessageSquare
+  Download, Upload, CheckCircle, Circle, CheckSquare, MessageSquare, BookOpen
 } from 'lucide-react';
 
 export default function MiContenido({ previewProfile, isPreview = false }) {
