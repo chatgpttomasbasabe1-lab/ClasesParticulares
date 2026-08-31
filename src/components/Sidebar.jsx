@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Eye } from 'lucide-react';
 import logoImg from '../assets/logo_tb.png';
+import NotificationBell from './NotificationBell';
 
 const profesorLinks = [
   { to: '/profesor/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -67,6 +68,7 @@ export default function Sidebar() {
           <span className="mobile-topbar-title">Clases Particulares</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <NotificationBell />
           <div style={{
             width: 32, height: 32, borderRadius: '50%',
             background: 'var(--accent-gradient)',
