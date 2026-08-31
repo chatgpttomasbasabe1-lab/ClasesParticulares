@@ -62,6 +62,9 @@ export default function CalendarioClases() {
   async function handleSave() {
     if (!form.alumno_id || !form.fecha || !form.hora) return;
 
+    const precio = preciosConfig.find(p => p.nivel_aprendizaje_id == form.nivel_aprendizaje_id);
+    const costo = (precio?.precio_por_hora || 0) * form.duracion_horas;
+
     await supabase.from('clases').insert({
       alumno_id: form.alumno_id,
       nivel_aprendizaje_id: form.nivel_aprendizaje_id,
@@ -69,7 +72,7 @@ export default function CalendarioClases() {
       hora: form.hora,
       duracion_horas: form.duracion_horas,
       estado: 'PENDIENTE',
-      costo_calculado: 0
+      costo_calculado: costo
     });
 
     setModalOpen(false);
