@@ -28,7 +28,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <div className="login-card slide-up">
-        <div className="login-logo">CP</div>
+        <img src="/src/assets/logo.png" className="login-logo-img" alt="Logo" />
         <h1>Bienvenido</h1>
         <p className="subtitle">Ingresá tus credenciales para acceder a la plataforma</p>
 

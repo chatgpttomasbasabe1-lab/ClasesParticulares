@@ -40,7 +40,7 @@ export default function Sidebar() {
   return (
     <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
-        <div className="sidebar-logo">CP</div>
+        <img src="/src/assets/logo.png" className="sidebar-logo-img" alt="Logo" />
         {!collapsed && (
           <div>
             <div className="sidebar-title">Clases Particulares</div>
