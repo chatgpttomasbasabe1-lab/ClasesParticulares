@@ -24,7 +24,7 @@ export default function CalendarioClases() {
 
   async function loadData() {
     const [{ data: alums }, { data: na }, { data: precios }] = await Promise.all([
-      supabase.from('alumnos').select('*, niveles_aprendizaje(*, materias(*), niveles_educativos(*))').eq('estado', 'ACTIVO'),
+      supabase.from('alumnos').select('*, alumno_niveles_aprendizaje(nivel_aprendizaje_id, niveles_aprendizaje(*, materias(*), niveles_educativos(*)))').eq('estado', 'ACTIVO'),
       supabase.from('niveles_aprendizaje').select('*, materias(*), niveles_educativos(*)'),
       supabase.from('precios_config').select('*')
     ]);
@@ -52,15 +52,23 @@ export default function CalendarioClases() {
 
   function onAlumnoChange(alumnoId) {
     const alumno = alumnos.find(a => a.id == alumnoId);
+    let defaultNaId = '';
+    const mappings = alumno?.alumno_niveles_aprendizaje || [];
+    if (mappings.length === 1) {
+      defaultNaId = mappings[0].nivel_aprendizaje_id;
+    }
     setForm(prev => ({
       ...prev,
       alumno_id: alumnoId,
-      nivel_aprendizaje_id: alumno?.nivel_aprendizaje_id || prev.nivel_aprendizaje_id
+      nivel_aprendizaje_id: defaultNaId
     }));
   }
 
   async function handleSave() {
-    if (!form.alumno_id || !form.fecha || !form.hora) return;
+    if (!form.alumno_id || !form.fecha || !form.hora || !form.nivel_aprendizaje_id) {
+      alert('Debe completar todos los campos, incluyendo la materia.');
+      return;
+    }
 
     const precio = preciosConfig.find(p => p.nivel_aprendizaje_id == form.nivel_aprendizaje_id);
     const costo = (precio?.precio_por_hora || 0) * form.duracion_horas;
@@ -99,55 +107,62 @@ export default function CalendarioClases() {
   const startPadding = getDay(monthStart);
   const today = new Date();
 
+  // Helper para materias del alumno seleccionado
+  const selectedAlumno = alumnos.find(a => a.id == form.alumno_id);
+  const materiasDelAlumno = selectedAlumno?.alumno_niveles_aprendizaje || [];
+
   return (
     <div className="fade-in">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1>Calendario de Clases</h1>
-          <p>Agendá y gestioná tus clases. Marcalas como dictadas para facturar.</p>
+          <h1>Calendario</h1>
+          <p>Agendá y gestioná tus clases.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => openNewClase(new Date())}>
-          <Plus size={18} /> Nueva Clase
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <button className="btn btn-ghost btn-icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
+            <ChevronLeft size={20} />
+          </button>
+          <h3 style={{ margin: 0, minWidth: 150, textAlign: 'center', textTransform: 'capitalize' }}>
+            {format(currentMonth, 'MMMM yyyy', { locale: es })}
+          </h3>
+          <button className="btn btn-ghost btn-icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
+            <ChevronRight size={20} />
+          </button>
+        </div>
       </div>
 
-      {/* Month navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <button className="btn btn-secondary" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-          <ChevronLeft size={18} />
-        </button>
-        <h2 style={{ fontSize: 20, fontWeight: 600, textTransform: 'capitalize' }}>
-          {format(currentMonth, 'MMMM yyyy', { locale: es })}
-        </h2>
-        <button className="btn btn-secondary" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-          <ChevronRight size={18} />
-        </button>
-      </div>
-
-      {/* Calendar Grid */}
       <div className="calendar-grid">
         {DIAS.map(d => (
           <div key={d} className="calendar-header-cell">{d}</div>
         ))}
+        
         {Array.from({ length: startPadding }).map((_, i) => (
-          <div key={`pad-${i}`} className="calendar-cell other-month"></div>
+          <div key={`pad-${i}`} className="calendar-cell" style={{ opacity: 0.3 }} />
         ))}
-        {days.map(day => {
-          const dayStr = format(day, 'yyyy-MM-dd');
-          const dayClases = clases.filter(c => c.fecha === dayStr);
-          const isToday = isSameDay(day, today);
+
+        {days.map(date => {
+          const isToday = isSameDay(date, today);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          const dayClases = clases.filter(c => c.fecha === dateStr);
 
           return (
-            <div
-              key={dayStr}
-              className={`calendar-cell ${isToday ? 'today' : ''}`}
-              onClick={() => openNewClase(day)}
-            >
-              <div className="calendar-day">{format(day, 'd')}</div>
+            <div key={date.toString()} className={calendar-cell } onClick={() => openNewClase(date)}>
+              <div className="calendar-cell-header">
+                <span style={{ 
+                  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: isToday ? 'var(--accent-primary)' : 'transparent',
+                  color: isToday ? 'white' : 'inherit', borderRadius: '50%', fontWeight: isToday ? 600 : 400
+                }}>
+                  {format(date, 'd')}
+                </span>
+                <button className="btn btn-ghost btn-icon" style={{ opacity: 0.5, transform: 'scale(0.8)' }}>
+                  <Plus size={16} />
+                </button>
+              </div>
+              
               {dayClases.map(c => (
-                <div
-                  key={c.id}
-                  className={`calendar-event ${c.estado.toLowerCase()}`}
+                <div key={c.id} 
+                  className={calendar-event }
                   onClick={(e) => e.stopPropagation()}
                 >
                   {c.hora} - {c.alumnos?.nombre}
@@ -194,10 +209,7 @@ export default function CalendarioClases() {
                     <td>{c.duracion_horas}h</td>
                     <td>${c.costo_calculado?.toLocaleString('es-AR')}</td>
                     <td>
-                      <span className={`badge ${
-                        c.estado === 'PENDIENTE' ? 'badge-warning' :
-                        c.estado === 'DICTADA' ? 'badge-success' : 'badge-danger'
-                      }`}>
+                      <span className={adge }>
                         {c.estado}
                       </span>
                     </td>
@@ -242,6 +254,21 @@ export default function CalendarioClases() {
             ))}
           </select>
         </div>
+        
+        {form.alumno_id && (
+          <div className="form-group">
+            <label className="form-label">Materia de la clase</label>
+            <select className="form-select" value={form.nivel_aprendizaje_id} onChange={(e) => setForm({...form, nivel_aprendizaje_id: e.target.value})}>
+              <option value="">Seleccionar materia...</option>
+              {materiasDelAlumno.map(m => (
+                <option key={m.nivel_aprendizaje_id} value={m.nivel_aprendizaje_id}>
+                  {m.niveles_aprendizaje?.materias?.nombre} - {m.niveles_aprendizaje?.niveles_educativos?.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="form-row">
           <div className="form-group">
             <label className="form-label">Fecha</label>

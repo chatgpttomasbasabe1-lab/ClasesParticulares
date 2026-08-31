@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
     // Check if alumno
     const { data: alum } = await supabase
       .from('alumnos')
-      .select('*, niveles_aprendizaje(*, materias(*), niveles_educativos(*))')
+      .select('*, niveles_aprendizaje(*, materias(*), niveles_educativos(*)), alumno_niveles_aprendizaje(nivel_aprendizaje_id, niveles_aprendizaje(*, materias(*), niveles_educativos(*)))')
       .eq('user_id', userId)
       .single();
 

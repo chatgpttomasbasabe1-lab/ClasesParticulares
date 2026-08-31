@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import Modal from '../../components/Modal';
 import {
   Plus, Edit2, Trash2, Users, Search, UserPlus,
-  UserCheck, UserX, Clock, Award
+  UserCheck, UserX, Clock, Award, CheckSquare, Square
 } from 'lucide-react';
 
 const ESTADOS = ['ACTIVO', 'CLASE_PENDIENTE', 'CICLO_CUMPLIDO', 'ABANDONO'];
@@ -23,12 +23,13 @@ const ESTADO_LABEL = {
 export default function Alumnos() {
   const [alumnos, setAlumnos] = useState([]);
   const [nivelesAprendizaje, setNivelesAprendizaje] = useState([]);
+  const [nivelesEducativos, setNivelesEducativos] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     nombre: '', apellido: '', telefono: '', email: '',
-    direccion: '', password: '', nivel_aprendizaje_id: '', estado: 'ACTIVO'
+    direccion: '', password: '', nivel_educativo_id: '', niveles_aprendizaje_ids: [], estado: 'ACTIVO'
   });
   const [loading, setLoading] = useState(true);
 
@@ -37,14 +38,24 @@ export default function Alumnos() {
   async function loadData() {
     const [{ data: alums }, { data: na }] = await Promise.all([
       supabase.from('alumnos')
-        .select('*, niveles_aprendizaje(*, materias(*), niveles_educativos(*))')
+        .select('*, alumno_niveles_aprendizaje(nivel_aprendizaje_id, niveles_aprendizaje(*, materias(*), niveles_educativos(*)))')
         .order('nombre'),
       supabase.from('niveles_aprendizaje')
         .select('*, materias(*), niveles_educativos(*)')
         .order('id')
     ]);
+    
     setAlumnos(alums || []);
     setNivelesAprendizaje(na || []);
+    
+    // Extract unique niveles_educativos for the dropdown
+    const neMap = {};
+    (na || []).forEach(n => {
+      if (n.niveles_educativos) {
+        neMap[n.niveles_educativos.id] = n.niveles_educativos;
+      }
+    });
+    setNivelesEducativos(Object.values(neMap));
     setLoading(false);
   }
 
@@ -52,36 +63,65 @@ export default function Alumnos() {
     setEditing(null);
     setForm({
       nombre: '', apellido: '', telefono: '', email: '',
-      direccion: '', password: '', nivel_aprendizaje_id: nivelesAprendizaje[0]?.id || '', estado: 'ACTIVO'
+      direccion: '', password: '', nivel_educativo_id: nivelesEducativos[0]?.id || '', niveles_aprendizaje_ids: [], estado: 'ACTIVO'
     });
     setModalOpen(true);
   }
 
   function openEdit(alumno) {
     setEditing(alumno);
+    // Identify their current nivel_educativo_id from the first mapped subject, or default
+    const currentMappings = alumno.alumno_niveles_aprendizaje || [];
+    let neId = nivelesEducativos[0]?.id || '';
+    if (currentMappings.length > 0 && currentMappings[0].niveles_aprendizaje) {
+      neId = currentMappings[0].niveles_aprendizaje.nivel_educativo_id;
+    }
+    
     setForm({
       nombre: alumno.nombre, apellido: alumno.apellido,
       telefono: alumno.telefono || '', email: alumno.email || '',
       direccion: alumno.direccion || '', password: '',
-      nivel_aprendizaje_id: alumno.nivel_aprendizaje_id, estado: alumno.estado
+      nivel_educativo_id: neId, 
+      niveles_aprendizaje_ids: currentMappings.map(m => m.nivel_aprendizaje_id), 
+      estado: alumno.estado
     });
     setModalOpen(true);
   }
 
+  function toggleMateria(naId) {
+    setForm(prev => {
+      const ids = [...prev.niveles_aprendizaje_ids];
+      if (ids.includes(naId)) {
+        return { ...prev, niveles_aprendizaje_ids: ids.filter(id => id !== naId) };
+      } else {
+        ids.push(naId);
+        return { ...prev, niveles_aprendizaje_ids: ids };
+      }
+    });
+  }
+
   async function handleSave() {
-    if (!form.nombre.trim() || !form.apellido.trim() || !form.nivel_aprendizaje_id) return;
+    if (!form.nombre.trim() || !form.apellido.trim() || form.niveles_aprendizaje_ids.length === 0) {
+      alert('Debe completar nombre, apellido y seleccionar al menos una materia.');
+      return;
+    }
+
+    // fallback for old columns
+    const primaryNaId = form.niveles_aprendizaje_ids[0];
+
+    let alumnoId = null;
 
     if (editing) {
+      alumnoId = editing.id;
       await supabase.from('alumnos')
         .update({
           nombre: form.nombre, apellido: form.apellido,
           telefono: form.telefono, email: form.email,
-          direccion: form.direccion, nivel_aprendizaje_id: form.nivel_aprendizaje_id,
+          direccion: form.direccion, nivel_aprendizaje_id: primaryNaId,
           estado: form.estado
         })
-        .eq('id', editing.id);
+        .eq('id', alumnoId);
     } else {
-      // Create auth user first
       if (!form.email || !form.password) {
         alert('Email y contraseña son requeridos para crear un alumno.');
         return;
@@ -98,19 +138,37 @@ export default function Alumnos() {
       }
 
       const userId = authData?.user?.id;
-
       if (!userId) {
          alert('Error crítico: No se pudo obtener el ID del usuario creado.');
          return;
       }
 
-      await supabase.from('alumnos').insert({
+      const { data: insertData } = await supabase.from('alumnos').insert({
         nombre: form.nombre, apellido: form.apellido,
         telefono: form.telefono, email: form.email,
-        direccion: form.direccion, nivel_aprendizaje_id: form.nivel_aprendizaje_id,
+        direccion: form.direccion, nivel_aprendizaje_id: primaryNaId,
         estado: 'ACTIVO', user_id: userId
-      });
+      }).select();
+      
+      if (insertData && insertData.length > 0) {
+        alumnoId = insertData[0].id;
+      }
     }
+
+    if (alumnoId) {
+      // Manage alumno_niveles_aprendizaje
+      await supabase.from('alumno_niveles_aprendizaje').delete().eq('alumno_id', alumnoId);
+      
+      const insertMappings = form.niveles_aprendizaje_ids.map(naId => ({
+        alumno_id: alumnoId,
+        nivel_aprendizaje_id: naId
+      }));
+      
+      if (insertMappings.length > 0) {
+        await supabase.from('alumno_niveles_aprendizaje').insert(insertMappings);
+      }
+    }
+
     setModalOpen(false);
     loadData();
   }
@@ -129,6 +187,8 @@ export default function Alumnos() {
   const filtered = alumnos.filter(a =>
     `${a.nombre} ${a.apellido}`.toLowerCase().includes(search.toLowerCase())
   );
+  
+  const materiasDisponibles = nivelesAprendizaje.filter(na => na.nivel_educativo_id == form.nivel_educativo_id);
 
   return (
     <div className="fade-in">
@@ -166,7 +226,7 @@ export default function Alumnos() {
               <tr>
                 <th>Alumno</th>
                 <th>Email</th>
-                <th>Materia / Nivel</th>
+                <th>Materias (Nivel)</th>
                 <th>Estado</th>
                 <th style={{ width: 140 }}>Acciones</th>
               </tr>
@@ -187,9 +247,22 @@ export default function Alumnos() {
                   </td>
                   <td style={{ color: 'var(--text-secondary)' }}>{a.email}</td>
                   <td>
-                    <span className="badge badge-purple">
-                      {a.niveles_aprendizaje?.materias?.nombre} - {a.niveles_aprendizaje?.niveles_educativos?.nombre}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      {(a.alumno_niveles_aprendizaje || []).map(mapping => {
+                        const na = mapping.niveles_aprendizaje;
+                        if (!na) return null;
+                        return (
+                          <span key={mapping.nivel_aprendizaje_id} className="badge badge-purple" style={{ width: 'fit-content', fontSize: 11 }}>
+                            {na.materias?.nombre} - {na.niveles_educativos?.nombre}
+                          </span>
+                        );
+                      })}
+                      {(!a.alumno_niveles_aprendizaje || a.alumno_niveles_aprendizaje.length === 0) && (
+                         <span className="badge badge-neutral" style={{ width: 'fit-content', fontSize: 11 }}>
+                            Sin materias asignadas
+                         </span>
+                      )}
+                    </div>
                   </td>
                   <td>
                     <select
@@ -251,7 +324,7 @@ export default function Alumnos() {
           <div className="form-group">
             <label className="form-label">Email</label>
             <input className="form-input" type="email" placeholder="juan@email.com" value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })} />
+              onChange={(e) => setForm({ ...form, email: e.target.value })} disabled={!!editing} />
           </div>
           <div className="form-group">
             <label className="form-label">Teléfono</label>
@@ -271,15 +344,15 @@ export default function Alumnos() {
           <input className="form-input" placeholder="Dirección del alumno" value={form.direccion}
             onChange={(e) => setForm({ ...form, direccion: e.target.value })} />
         </div>
+        
         <div className="form-row">
           <div className="form-group">
-            <label className="form-label">Nivel de Aprendizaje (Materia + Nivel)</label>
-            <select className="form-select" value={form.nivel_aprendizaje_id}
-              onChange={(e) => setForm({ ...form, nivel_aprendizaje_id: e.target.value })}>
-              <option value="">Seleccionar...</option>
-              {nivelesAprendizaje.map(na => (
-                <option key={na.id} value={na.id}>
-                  {na.materias?.nombre} - {na.niveles_educativos?.nombre}
+            <label className="form-label">1. Seleccionar Nivel Educativo</label>
+            <select className="form-select" value={form.nivel_educativo_id}
+              onChange={(e) => setForm({ ...form, nivel_educativo_id: e.target.value, niveles_aprendizaje_ids: [] })}>
+              {nivelesEducativos.map(ne => (
+                <option key={ne.id} value={ne.id}>
+                  {ne.nombre}
                 </option>
               ))}
             </select>
@@ -291,6 +364,37 @@ export default function Alumnos() {
                 onChange={(e) => setForm({ ...form, estado: e.target.value })}>
                 {ESTADOS.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
               </select>
+            </div>
+          )}
+        </div>
+        
+        <div className="form-group" style={{ marginTop: 16 }}>
+          <label className="form-label">2. Seleccionar Materias (Múltiples)</label>
+          {materiasDisponibles.length === 0 ? (
+            <p style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>No hay materias configuradas para este nivel.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+              {materiasDisponibles.map(na => {
+                const isSelected = form.niveles_aprendizaje_ids.includes(na.id);
+                return (
+                  <div key={na.id} 
+                    style={{ 
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
+                      background: isSelected ? 'var(--bg-glass-hover)' : 'var(--bg-glass)',
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                      borderRadius: 6, cursor: 'pointer', transition: 'all 0.2s'
+                    }}
+                    onClick={() => toggleMateria(na.id)}
+                  >
+                    {isSelected ? (
+                      <CheckSquare size={18} style={{ color: 'var(--accent-primary)' }} />
+                    ) : (
+                      <Square size={18} style={{ color: 'var(--text-tertiary)' }} />
+                    )}
+                    <span style={{ fontWeight: isSelected ? 600 : 400 }}>{na.materias?.nombre}</span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

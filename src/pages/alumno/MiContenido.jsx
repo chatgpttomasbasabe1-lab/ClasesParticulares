@@ -13,9 +13,11 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
   const navigate = useNavigate();
   const [apartados, setApartados] = useState([]);
   const [modulos, setModulos] = useState({});
+  const [submodulos, setSubmodulos] = useState({});
   const [archivos, setArchivos] = useState({});
   const [progreso, setProgreso] = useState({});
   const [expanded, setExpanded] = useState({});
+  const [expandedModulos, setExpandedModulos] = useState({});
   const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
@@ -28,19 +30,28 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
     setApartados(apts || []);
 
     const modulosMap = {};
+    const submodulosMap = {};
     const archivosMap = {};
     for (const apt of (apts || [])) {
       const { data: mods } = await supabase.from('modulos')
         .select('*').eq('apartado_id', apt.id).order('orden');
-      modulosMap[apt.id] = mods || [];
+      
+      const topLevelMods = (mods || []).filter(m => !m.modulo_padre_id);
+      modulosMap[apt.id] = topLevelMods;
 
       for (const mod of (mods || [])) {
+        if (mod.modulo_padre_id) {
+          if (!submodulosMap[mod.modulo_padre_id]) submodulosMap[mod.modulo_padre_id] = [];
+          submodulosMap[mod.modulo_padre_id].push(mod);
+        }
+
         const { data: archs } = await supabase.from('archivos')
           .select('*').eq('modulo_id', mod.id).order('created_at');
         archivosMap[mod.id] = archs || [];
       }
     }
     setModulos(modulosMap);
+    setSubmodulos(submodulosMap);
     setArchivos(archivosMap);
 
     // Load progress
@@ -103,6 +114,107 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
     alert('¡Entrega subida exitosamente!');
   }
 
+  function toggleModulo(id) {
+    setExpandedModulos(prev => ({ ...prev, [id]: !prev[id] }));
+  }
+
+  const renderModulo = (mod, isSub = false) => {
+    const isCompleted = progreso[mod.id]?.completado;
+    const children = submodulos[mod.id] || [];
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedModulos[mod.id];
+
+    return (
+      <div key={mod.id} style={{ marginLeft: isSub ? 20 : 0, borderLeft: isSub ? '1px dashed var(--border-primary)' : 'none', paddingLeft: isSub ? 16 : 0, marginTop: isSub ? 8 : 0 }}>
+        <div className="tree-module" style={{
+          borderColor: isCompleted ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-primary)',
+          cursor: hasChildren ? 'pointer' : 'default'
+        }} onClick={(e) => {
+          if (hasChildren && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
+            toggleModulo(mod.id);
+          }
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {hasChildren && (
+              <span onClick={(e) => { e.stopPropagation(); toggleModulo(mod.id); }} style={{ cursor: 'pointer' }}>
+                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+            )}
+            {!hasChildren && (
+              <button
+                className="btn btn-ghost btn-icon"
+                onClick={(e) => { e.stopPropagation(); toggleCompletado(mod.id); }}
+                style={{ color: isCompleted ? 'var(--success)' : 'var(--text-muted)' }}
+              >
+                {isCompleted ? <CheckCircle size={20} /> : <Circle size={20} />}
+              </button>
+            )}
+            <div>
+              <div style={{
+                fontWeight: 500, fontSize: 14,
+                textDecoration: isCompleted ? 'line-through' : 'none',
+                opacity: isCompleted ? 0.7 : 1
+              }}>
+                {mod.nombre}
+              </div>
+              {mod.requiere_entrega && (
+                <span className="badge badge-warning" style={{ fontSize: 10, padding: '2px 6px', marginTop: 4 }}>
+                  <CheckSquare size={10} /> Requiere Entrega
+                </span>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {mod.requiere_entrega && (
+              <label className="btn btn-sm btn-secondary" style={{ cursor: 'pointer' }} onClick={(e) => e.stopPropagation()}>
+                <Upload size={14} /> Entregar
+                <input type="file" hidden accept=".pdf,.png,.jpg,.jpeg,.xls,.xlsx"
+                  onChange={(e) => handleEntrega(mod.id, e)} disabled={uploading} />
+              </label>
+            )}
+            {mod.foro_habilitado && (
+              <button 
+                className="btn btn-sm" 
+                style={{ background: 'var(--info-bg)', color: 'var(--info)' }}
+                onClick={(e) => { e.stopPropagation(); if (!isPreview) navigate(`/alumno/foro?modulo=${mod.id}`); }}
+                disabled={isPreview}
+              >
+                <MessageSquare size={14} /> Foro
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Archivos del módulo */}
+        {(!hasChildren || isExpanded) && (archivos[mod.id] || []).length > 0 && (
+          <div style={{ paddingLeft: 48, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(archivos[mod.id] || []).map(arch => (
+              <a key={arch.id} href={arch.url} target="_blank" rel="noopener"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '8px 12px', background: 'var(--bg-glass)', borderRadius: 6,
+                  border: '1px solid var(--border-primary)', fontSize: 13,
+                  color: 'var(--text-primary)', textDecoration: 'none',
+                  transition: 'all 150ms'
+                }}>
+                <File size={14} style={{ color: 'var(--accent-primary)' }} />
+                <span style={{ flex: 1 }}>{arch.nombre}</span>
+                <Download size={14} style={{ color: 'var(--text-tertiary)' }} />
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Render Submodulos */}
+        {isExpanded && children.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            {children.map(child => renderModulo(child, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="fade-in">
       <div className="page-header">
@@ -134,79 +246,7 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
 
               {expanded[apt.id] && (
                 <div className="tree-item-children">
-                  {(modulos[apt.id] || []).map(mod => {
-                    const isCompleted = progreso[mod.id]?.completado;
-                    return (
-                      <div key={mod.id}>
-                        <div className="tree-module" style={{
-                          borderColor: isCompleted ? 'rgba(16, 185, 129, 0.3)' : 'var(--border-primary)'
-                        }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <button
-                              className="btn btn-ghost btn-icon"
-                              onClick={() => toggleCompletado(mod.id)}
-                              style={{ color: isCompleted ? 'var(--success)' : 'var(--text-muted)' }}
-                            >
-                              {isCompleted ? <CheckCircle size={20} /> : <Circle size={20} />}
-                            </button>
-                            <div>
-                              <div style={{
-                                fontWeight: 500, fontSize: 14,
-                                textDecoration: isCompleted ? 'line-through' : 'none',
-                                opacity: isCompleted ? 0.7 : 1
-                              }}>
-                                {mod.nombre}
-                              </div>
-                              {mod.requiere_entrega && (
-                                <span className="badge badge-warning" style={{ fontSize: 10, padding: '2px 6px', marginTop: 4 }}>
-                                  <CheckSquare size={10} /> Requiere Entrega
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            {mod.requiere_entrega && (
-                              <label className="btn btn-sm btn-secondary" style={{ cursor: 'pointer' }}>
-                                <Upload size={14} /> Entregar
-                                <input type="file" hidden accept=".pdf,.png,.jpg,.jpeg,.xls,.xlsx"
-                                  onChange={(e) => handleEntrega(mod.id, e)} disabled={uploading} />
-                              </label>
-                            )}
-                            {mod.foro_habilitado && (
-                              <button 
-                                className="btn btn-sm" 
-                                style={{ background: 'var(--info-bg)', color: 'var(--info)' }}
-                                onClick={() => !isPreview && navigate(`/alumno/foro?modulo=${mod.id}`)}
-                                disabled={isPreview}
-                              >
-                                <MessageSquare size={14} /> Foro
-                              </button>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Archivos del módulo */}
-                        {(archivos[mod.id] || []).length > 0 && (
-                          <div style={{ paddingLeft: 48, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            {(archivos[mod.id] || []).map(arch => (
-                              <a key={arch.id} href={arch.url} target="_blank" rel="noopener"
-                                style={{
-                                  display: 'flex', alignItems: 'center', gap: 8,
-                                  padding: '8px 12px', background: 'var(--bg-glass)', borderRadius: 6,
-                                  border: '1px solid var(--border-primary)', fontSize: 13,
-                                  color: 'var(--text-primary)', textDecoration: 'none',
-                                  transition: 'all 150ms'
-                                }}>
-                                <File size={14} style={{ color: 'var(--accent-primary)' }} />
-                                <span style={{ flex: 1 }}>{arch.nombre}</span>
-                                <Download size={14} style={{ color: 'var(--text-tertiary)' }} />
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {(modulos[apt.id] || []).map(mod => renderModulo(mod))}
                 </div>
               )}
             </div>

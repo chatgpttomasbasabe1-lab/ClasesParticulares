@@ -11,12 +11,19 @@ export default function MiProgreso({ previewProfile }) {
   const [apartadosProgreso, setApartadosProgreso] = useState([]);
 
   useEffect(() => {
-    if (profile?.nivel_aprendizaje_id) loadProgreso();
+    if (profile?.alumno_niveles_aprendizaje?.length > 0 || profile?.nivel_aprendizaje_id) {
+      loadProgreso();
+    }
   }, [profile]);
 
   async function loadProgreso() {
+    const ids = (profile?.alumno_niveles_aprendizaje || []).map(na => na.nivel_aprendizaje_id);
+    if (ids.length === 0 && profile?.nivel_aprendizaje_id) ids.push(profile.nivel_aprendizaje_id);
+    if (ids.length === 0) return;
+
     const { data: apts } = await supabase.from('apartados')
-      .select('*').eq('nivel_aprendizaje_id', profile.nivel_aprendizaje_id);
+      .select('*, niveles_aprendizaje(materias(nombre))')
+      .in('nivel_aprendizaje_id', ids);
 
     let totalMods = 0;
     let totalCompletados = 0;
@@ -37,7 +44,7 @@ export default function MiProgreso({ previewProfile }) {
       totalCompletados += compCount;
 
       aptProgreso.push({
-        nombre: apt.nombre,
+        nombre: apt.nombre + (apt.niveles_aprendizaje ? ` (${apt.niveles_aprendizaje.materias?.nombre})` : ''),
         total: modCount,
         completados: compCount,
         porcentaje: modCount > 0 ? Math.round((compCount / modCount) * 100) : 0
@@ -101,29 +108,37 @@ export default function MiProgreso({ previewProfile }) {
               </div>
             </div>
           ))}
+          {apartadosProgreso.length === 0 && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Sin progreso registrado.</p>
+          )}
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Resumen Visual</h3>
-          </div>
+        <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <h3 className="card-title" style={{ width: '100%', marginBottom: 20 }}>Balance General</h3>
           <ResponsiveContainer width="100%" height={250}>
             <PieChart>
               <Pie
                 data={pieData}
-                cx="50%" cy="50%"
-                innerRadius={60} outerRadius={90}
+                innerRadius={60}
+                outerRadius={80}
                 paddingAngle={5}
                 dataKey="value"
+                stroke="none"
               >
-                <Cell fill="#6366f1" />
-                <Cell fill="rgba(255,255,255,0.06)" />
+                <Cell fill="var(--success)" />
+                <Cell fill="var(--warning)" />
               </Pie>
             </PieChart>
           </ResponsiveContainer>
-          <div style={{ textAlign: 'center', marginTop: -20 }}>
-            <div style={{ fontSize: 36, fontWeight: 800 }}>{porcentajeGeneral}%</div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Completado</div>
+          <div style={{ display: 'flex', gap: 16, marginTop: -20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--success)' }}></div>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Completado</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--warning)' }}></div>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Pendiente</span>
+            </div>
           </div>
         </div>
       </div>
