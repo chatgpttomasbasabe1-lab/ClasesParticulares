@@ -195,28 +195,48 @@ export default function Contenido() {
       let parentModuloId = null;
       let currentPath = apartadoName;
 
-      for (let i = 1; i < pathParts.length - 1; i++) {
-        const modName = pathParts[i];
-        currentPath += '/' + modName;
-        
-        let modId = createdModulos[currentPath];
+      // Si el archivo está directamente en la raíz de la carpeta (ej. MiCarpeta/archivo.pdf)
+      // pathParts.length será 2. Necesitamos crear un módulo por defecto para contenerlo.
+      if (pathParts.length === 2) {
+        let modId = createdModulos[currentPath + '/General'];
         if (!modId) {
            const { data } = await supabase.from('modulos').insert({
-              nombre: modName, 
+              nombre: 'General', 
               apartado_id: apartadoId,
-              modulo_padre_id: parentModuloId,
+              modulo_padre_id: null,
               orden: 1 
            }).select().single();
            if (data) modId = data.id;
-           if (modId) createdModulos[currentPath] = modId;
+           if (modId) createdModulos[currentPath + '/General'] = modId;
         }
         parentModuloId = modId;
+      } else {
+        // Recorrer las subcarpetas
+        for (let i = 1; i < pathParts.length - 1; i++) {
+          const modName = pathParts[i];
+          currentPath += '/' + modName;
+          
+          let modId = createdModulos[currentPath];
+          if (!modId) {
+             const { data } = await supabase.from('modulos').insert({
+                nombre: modName, 
+                apartado_id: apartadoId,
+                modulo_padre_id: parentModuloId,
+                orden: 1 
+             }).select().single();
+             if (data) modId = data.id;
+             if (modId) createdModulos[currentPath] = modId;
+          }
+          parentModuloId = modId;
+        }
       }
       
-      // Upload file to the deepest module/submodule
+      // Subir archivo al módulo/submódulo final
       if (parentModuloId) {
          const fileExt = file.name.split('.').pop();
-         const filePath = `contenido/${selectedNA.id}/${parentModuloId}/${Date.now()}_${file.name}`;
+         // Evitar colisiones si se suben varios archivos en el mismo milisegundo
+         const randomId = Math.random().toString(36).substring(2, 9);
+         const filePath = `contenido/${selectedNA.id}/${parentModuloId}/${Date.now()}_${randomId}_${file.name}`;
          const { error: uploadErr } = await supabase.storage
            .from('material-didactico')
            .upload(filePath, file);
