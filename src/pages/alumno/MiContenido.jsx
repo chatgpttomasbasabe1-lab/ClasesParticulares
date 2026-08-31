@@ -27,29 +27,40 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
   async function loadContenido() {
     const { data: apts } = await supabase.from('apartados')
       .select('*').eq('nivel_aprendizaje_id', profile.nivel_aprendizaje_id).order('nombre');
-    setApartados(apts || []);
+    const aptsData = apts || [];
+    setApartados(aptsData);
+
+    const aptIds = aptsData.map(a => a.id);
+    
+    let modsData = [];
+    if (aptIds.length > 0) {
+      const { data: mods } = await supabase.from('modulos').select('*').in('apartado_id', aptIds).order('orden');
+      modsData = mods || [];
+    }
+
+    const modIds = modsData.map(m => m.id);
+    let archsData = [];
+    if (modIds.length > 0) {
+      const { data: archs } = await supabase.from('archivos').select('*').in('modulo_id', modIds).order('created_at');
+      archsData = archs || [];
+    }
 
     const modulosMap = {};
     const submodulosMap = {};
     const archivosMap = {};
-    for (const apt of (apts || [])) {
-      const { data: mods } = await supabase.from('modulos')
-        .select('*').eq('apartado_id', apt.id).order('orden');
-      
-      const topLevelMods = (mods || []).filter(m => !m.modulo_padre_id);
-      modulosMap[apt.id] = topLevelMods;
 
-      for (const mod of (mods || [])) {
-        if (mod.modulo_padre_id) {
-          if (!submodulosMap[mod.modulo_padre_id]) submodulosMap[mod.modulo_padre_id] = [];
-          submodulosMap[mod.modulo_padre_id].push(mod);
-        }
+    aptsData.forEach(apt => {
+      modulosMap[apt.id] = modsData.filter(m => m.apartado_id === apt.id && !m.modulo_padre_id);
+    });
 
-        const { data: archs } = await supabase.from('archivos')
-          .select('*').eq('modulo_id', mod.id).order('created_at');
-        archivosMap[mod.id] = archs || [];
+    modsData.forEach(mod => {
+      if (mod.modulo_padre_id) {
+        if (!submodulosMap[mod.modulo_padre_id]) submodulosMap[mod.modulo_padre_id] = [];
+        submodulosMap[mod.modulo_padre_id].push(mod);
       }
-    }
+      archivosMap[mod.id] = archsData.filter(a => a.modulo_id === mod.id);
+    });
+
     setModulos(modulosMap);
     setSubmodulos(submodulosMap);
     setArchivos(archivosMap);
