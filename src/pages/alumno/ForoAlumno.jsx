@@ -12,8 +12,10 @@ export default function ForoAlumno() {
   const [expandedConsulta, setExpandedConsulta] = useState(null);
   const [respuestas, setRespuestas] = useState({});
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({ titulo: '', contenido: '', modulo_id: '', nivel_aprendizaje_id: '' });
+  const [form, setForm] = useState({ titulo: '', contenido: '', modulo_id: '', apartado_id: '', nivel_aprendizaje_id: '' });
   const [modulosDisponibles, setModulosDisponibles] = useState([]);
+  const [apartadosDisponibles, setApartadosDisponibles] = useState([]);
+  const [filtroApartado, setFiltroApartado] = useState('');
 
   useEffect(() => {
     if (profile?.alumno_niveles_aprendizaje?.length > 0 || profile?.nivel_aprendizaje_id) {
@@ -24,10 +26,20 @@ export default function ForoAlumno() {
 
   useEffect(() => {
     const moduloQuery = searchParams.get('modulo');
+    const apartadoQuery = searchParams.get('apartado');
+    
+    if (apartadoQuery) {
+      setFiltroApartado(apartadoQuery);
+      setForm(prev => ({ ...prev, apartado_id: apartadoQuery }));
+    }
+    
     if (moduloQuery) {
       setForm(prev => ({ ...prev, modulo_id: moduloQuery }));
       setModalOpen(true);
       setSearchParams({});
+    } else if (apartadoQuery) {
+      // Just filter, don't necessarily open modal unless they want to
+      // setSearchParams({});
     }
   }, [searchParams]);
 
@@ -42,7 +54,7 @@ export default function ForoAlumno() {
     if (ids.length === 0) return;
 
     const { data } = await supabase.from('consultas_foro')
-      .select('*, alumnos(nombre, apellido), modulos(nombre)')
+      .select('*, alumnos(nombre, apellido), modulos(nombre), apartados(nombre)')
       .in('nivel_aprendizaje_id', ids)
       .order('created_at', { ascending: false });
     setConsultas(data || []);
@@ -52,9 +64,11 @@ export default function ForoAlumno() {
     const ids = getNivelesIds();
     if (ids.length === 0) return;
 
-    const { data: apts } = await supabase.from('apartados').select('id, nivel_aprendizaje_id').in('nivel_aprendizaje_id', ids);
+    const { data: apts } = await supabase.from('apartados').select('id, nombre, nivel_aprendizaje_id').in('nivel_aprendizaje_id', ids);
     if (!apts || apts.length === 0) return;
     
+    setApartadosDisponibles(apts);
+
     const { data: mods } = await supabase.from('modulos')
       .select('id, nombre, apartado_id')
       .in('apartado_id', apts.map(a => a.id))
@@ -92,7 +106,13 @@ export default function ForoAlumno() {
     
     if (form.modulo_id) {
        const mod = modulosDisponibles.find(m => m.id == form.modulo_id);
-       if (mod) targetNaId = mod.nivel_aprendizaje_id;
+       if (mod) {
+         targetNaId = mod.nivel_aprendizaje_id;
+         form.apartado_id = form.apartado_id || mod.apartado_id; // Inferir apartado si no lo eligió
+       }
+    } else if (form.apartado_id) {
+       const apt = apartadosDisponibles.find(a => a.id == form.apartado_id);
+       if (apt) targetNaId = apt.nivel_aprendizaje_id;
     } else if (form.nivel_aprendizaje_id) {
        targetNaId = form.nivel_aprendizaje_id;
     } else {
@@ -107,6 +127,7 @@ export default function ForoAlumno() {
       nivel_aprendizaje_id: targetNaId,
       titulo: form.titulo,
       contenido: form.contenido,
+      apartado_id: form.apartado_id ? parseInt(form.apartado_id) : null,
       modulo_id: form.modulo_id ? parseInt(form.modulo_id) : null
     });
     setModalOpen(false);
@@ -114,19 +135,39 @@ export default function ForoAlumno() {
     loadConsultas();
   }
 
+  const consultasFiltradas = consultas.filter(c => 
+    filtroApartado ? c.apartado_id == filtroApartado : true
+  );
+
   return (
     <div className="fade-in">
-      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1>Foro de Consultas</h1>
-          <p>Consultá tus dudas. Las respuestas son visibles para todos los alumnos de tu nivel.</p>
+          <h1>Foro de Dudas</h1>
+          <p>Consultá tus dudas y lee las respuestas del profesor.</p>
         </div>
         <button className="btn btn-primary" onClick={() => setModalOpen(true)}>
-          <Plus size={18} /> Nueva Consulta
+          <Plus size={16} /> Nueva Consulta
         </button>
       </div>
+      
+      {apartadosDisponibles.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <select 
+            className="form-select" 
+            style={{ maxWidth: 300 }}
+            value={filtroApartado}
+            onChange={e => setFiltroApartado(e.target.value)}
+          >
+            <option value="">Todos los Apartados</option>
+            {apartadosDisponibles.map(a => (
+              <option key={a.id} value={a.id}>{a.nombre}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
-      {consultas.length === 0 ? (
+      {consultasFiltradas.length === 0 ? (
         <div className="card">
           <div className="empty-state">
             <HelpCircle size={48} />
@@ -136,7 +177,7 @@ export default function ForoAlumno() {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {consultas.map(c => {
+          {consultasFiltradas.map(c => {
             const isExpanded = expandedConsulta === c.id;
             return (
               <div key={c.id} className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -146,12 +187,19 @@ export default function ForoAlumno() {
                       <h3 style={{ margin: '0 0 4px 0', fontSize: 16 }}>{c.titulo}</h3>
                       <div style={{ fontSize: 13, color: 'var(--text-tertiary)', display: 'flex', gap: 12, alignItems: 'center' }}>
                         <span>Por {c.alumnos?.nombre} {c.alumnos?.apellido}</span>
-                        <span>•</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <span>{new Date(c.created_at).toLocaleDateString('es-AR')}</span>
+                        {c.apartados?.nombre && (
+                          <>
+                            <span>•</span>
+                            <span className="badge badge-purple" style={{ fontSize: 11, padding: '2px 6px' }}>{c.apartados.nombre}</span>
+                          </>
+                        )}
                         {c.modulos?.nombre && (
                           <>
                             <span>•</span>
-                            <span className="badge badge-purple" style={{ fontSize: 11, padding: '2px 6px' }}>{c.modulos.nombre}</span>
+                            <span className="badge badge-purple" style={{ fontSize: 11, padding: '2px 6px', background: 'var(--bg-glass-hover)' }}>{c.modulos.nombre}</span>
                           </>
                         )}
                       </div>
@@ -221,18 +269,31 @@ export default function ForoAlumno() {
         }
       >
         <div className="form-group">
-          <label className="form-label">Módulo Asociado (Opcional)</label>
-          <select className="form-select" value={form.modulo_id}
-            onChange={(e) => setForm({ ...form, modulo_id: e.target.value })}>
+          <label className="form-label">Asociar a un Apartado (Opcional)</label>
+          <select className="form-select" value={form.apartado_id}
+            onChange={(e) => setForm({ ...form, apartado_id: e.target.value, modulo_id: '' })}>
             <option value="">Consulta General</option>
-            {modulosDisponibles.map(m => (
-              <option key={m.id} value={m.id}>{m.nombre}</option>
+            {apartadosDisponibles.map(a => (
+              <option key={a.id} value={a.id}>{a.nombre}</option>
             ))}
           </select>
         </div>
+
+        {form.apartado_id && (
+          <div className="form-group">
+            <label className="form-label">Módulo Específico (Opcional)</label>
+            <select className="form-select" value={form.modulo_id}
+              onChange={(e) => setForm({ ...form, modulo_id: e.target.value })}>
+              <option value="">Todo el apartado</option>
+              {modulosDisponibles.filter(m => m.apartado_id == form.apartado_id).map(m => (
+                <option key={m.id} value={m.id}>{m.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
         
         {/* Si es general y tiene varias materias, preguntar para cual es */}
-        {!form.modulo_id && getNivelesIds().length > 1 && (
+        {!form.apartado_id && !form.modulo_id && getNivelesIds().length > 1 && (
            <div className="form-group">
              <label className="form-label">Materia de la Consulta</label>
              <select className="form-select" value={form.nivel_aprendizaje_id}

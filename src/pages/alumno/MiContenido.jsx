@@ -292,6 +292,15 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
                   <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                     {(modulos[apt.id] || []).length} módulos
                   </span>
+                  {!isPreview && (
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      onClick={(e) => { e.stopPropagation(); navigate(`/alumno/foro?apartado=${apt.id}`); }}
+                      title="Ir al foro de este apartado"
+                    >
+                      <MessageSquare size={16} />
+                    </button>
+                  )}
                 </div>
 
                 {expanded[apt.id] && (

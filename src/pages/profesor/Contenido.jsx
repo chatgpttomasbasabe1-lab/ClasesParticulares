@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import Modal from '../../components/Modal';
-import {
-  Plus, Edit2, Trash2, FileText, ChevronDown, ChevronRight,
-  Upload, Download, FolderOpen, File, MessageSquare
+import { useNavigate } from 'react-router-dom';
+import { 
+  FolderOpen, FileText, Plus, Edit2, Trash2, ChevronDown, ChevronRight,
+  Upload, Download, File, MessageSquare
 } from 'lucide-react';
 
 export default function Contenido() {
+  const navigate = useNavigate();
   const [nivelesAprendizaje, setNivelesAprendizaje] = useState([]);
   const [selectedNA, setSelectedNA] = useState(null);
   const [apartados, setApartados] = useState([]);
@@ -472,6 +474,13 @@ export default function Contenido() {
                     <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginRight: 8 }}>
                       {(modulos[apt.id] || []).length} módulos
                     </span>
+                    <button 
+                      className="btn btn-ghost btn-sm" 
+                      onClick={(e) => { e.stopPropagation(); navigate(`/profesor/foro?apartado=${apt.id}`); }}
+                      title="Foro del apartado"
+                    >
+                      <MessageSquare size={14} />
+                    </button>
                     <button className="btn btn-ghost btn-sm" onClick={(e) => { e.stopPropagation(); openEditApartado(apt); }}>
                       <Edit2 size={14} />
                     </button>

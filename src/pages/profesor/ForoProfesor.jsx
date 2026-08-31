@@ -1,17 +1,28 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import Modal from '../../components/Modal';
 import { HelpCircle, MessageCircle, Send, ChevronDown, ChevronRight } from 'lucide-react';
 
 export default function ForoProfesor() {
+  const [searchParams] = useSearchParams();
   const [nivelesAprendizaje, setNivelesAprendizaje] = useState([]);
   const [selectedNA, setSelectedNA] = useState(null);
   const [consultas, setConsultas] = useState([]);
   const [expandedConsulta, setExpandedConsulta] = useState(null);
   const [respuestas, setRespuestas] = useState({});
   const [replyText, setReplyText] = useState('');
+  const [apartadosDisponibles, setApartadosDisponibles] = useState([]);
+  const [filtroApartado, setFiltroApartado] = useState('');
 
   useEffect(() => { loadNA(); }, []);
+
+  useEffect(() => {
+    const apartadoQuery = searchParams.get('apartado');
+    if (apartadoQuery) {
+      setFiltroApartado(apartadoQuery);
+    }
+  }, [searchParams]);
 
   async function loadNA() {
     const { data } = await supabase.from('niveles_aprendizaje')
@@ -25,8 +36,11 @@ export default function ForoProfesor() {
   }, [selectedNA]);
 
   async function loadConsultas() {
+    const { data: apts } = await supabase.from('apartados').select('id, nombre').eq('nivel_aprendizaje_id', selectedNA.id);
+    setApartadosDisponibles(apts || []);
+
     const { data } = await supabase.from('consultas_foro')
-      .select('*, alumnos(nombre, apellido), modulos(nombre)')
+      .select('*, alumnos(nombre, apellido), modulos(nombre), apartados(nombre)')
       .eq('nivel_aprendizaje_id', selectedNA.id)
       .order('created_at', { ascending: false });
     setConsultas(data || []);
@@ -95,7 +109,23 @@ export default function ForoProfesor() {
         ))}
       </div>
 
-      {consultas.length === 0 ? (
+      {apartadosDisponibles.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <select 
+            className="form-select" 
+            style={{ maxWidth: 300 }}
+            value={filtroApartado}
+            onChange={e => setFiltroApartado(e.target.value)}
+          >
+            <option value="">Todos los Apartados</option>
+            {apartadosDisponibles.map(a => (
+              <option key={a.id} value={a.id}>{a.nombre}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {consultas.filter(c => filtroApartado ? c.apartado_id == filtroApartado : true).length === 0 ? (
         <div className="card">
           <div className="empty-state">
             <HelpCircle size={48} />
@@ -105,7 +135,7 @@ export default function ForoProfesor() {
         </div>
       ) : (
         <div>
-          {consultas.map(c => (
+          {consultas.filter(c => filtroApartado ? c.apartado_id == filtroApartado : true).map(c => (
             <div className="foro-post" key={c.id}>
               <div className="foro-post-header" onClick={() => toggleConsulta(c.id)} style={{ cursor: 'pointer' }}>
                 {expandedConsulta === c.id ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
@@ -115,6 +145,11 @@ export default function ForoProfesor() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600 }}>
                     {c.titulo}
+                    {c.apartado_id && (
+                      <span style={{ fontSize: 10, background: 'var(--purple-bg, #f3e8ff)', color: 'var(--purple, #9333ea)', padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>
+                        Apartado: {c.apartados?.nombre}
+                      </span>
+                    )}
                     {c.modulo_id && (
                       <span style={{ fontSize: 10, background: 'var(--info-bg)', color: 'var(--info)', padding: '2px 6px', borderRadius: 4, marginLeft: 8, verticalAlign: 'middle' }}>
                         Módulo: {c.modulos?.nombre}

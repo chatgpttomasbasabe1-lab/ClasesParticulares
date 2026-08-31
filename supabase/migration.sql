@@ -169,6 +169,8 @@ CREATE TABLE IF NOT EXISTS consultas_foro (
   id BIGSERIAL PRIMARY KEY,
   alumno_id BIGINT NOT NULL REFERENCES alumnos(id) ON DELETE CASCADE,
   nivel_aprendizaje_id BIGINT NOT NULL REFERENCES niveles_aprendizaje(id) ON DELETE CASCADE,
+  apartado_id BIGINT REFERENCES apartados(id) ON DELETE CASCADE,
+  modulo_id BIGINT REFERENCES modulos(id) ON DELETE CASCADE,
   titulo VARCHAR(300) NOT NULL,
   contenido TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()

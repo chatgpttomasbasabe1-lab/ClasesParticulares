@@ -29,7 +29,7 @@ export default function Dashboard() {
     try {
       // Load alumnos
       const { data: alumnos } = await supabase.from('alumnos')
-        .select('*, niveles_aprendizaje(*, materias(*))');
+        .select('*, alumno_niveles_aprendizaje(nivel_aprendizaje_id)');
 
       // Load clases del mes
       const now = new Date();
@@ -64,16 +64,26 @@ export default function Dashboard() {
       // Progreso por alumno
       const progresoData = [];
       for (const alumno of (alumnos || [])) {
-        const { count: totalModulos } = await supabase.from('modulos')
-          .select('*', { count: 'exact', head: true })
-          .eq('apartados.nivel_aprendizaje_id', alumno.nivel_aprendizaje_id);
+        const ids = (alumno.alumno_niveles_aprendizaje || []).map(na => na.nivel_aprendizaje_id);
+        if (ids.length === 0 && alumno.nivel_aprendizaje_id) ids.push(alumno.nivel_aprendizaje_id);
+
+        let totalModulos = 0;
+        if (ids.length > 0) {
+           const { data: apts } = await supabase.from('apartados').select('id').in('nivel_aprendizaje_id', ids);
+           if (apts && apts.length > 0) {
+             const { count } = await supabase.from('modulos')
+               .select('*', { count: 'exact', head: true })
+               .in('apartado_id', apts.map(a => a.id));
+             totalModulos = count || 0;
+           }
+        }
 
         const { count: completados } = await supabase.from('progreso_alumno_modulo')
           .select('*', { count: 'exact', head: true })
           .eq('alumno_id', alumno.id)
           .eq('completado', true);
 
-        const porcentaje = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
+        const porcentaje = totalModulos > 0 ? Math.round(((completados || 0) / totalModulos) * 100) : 0;
         progresoData.push({
           nombre: `${alumno.nombre} ${alumno.apellido}`,
           progreso: porcentaje
