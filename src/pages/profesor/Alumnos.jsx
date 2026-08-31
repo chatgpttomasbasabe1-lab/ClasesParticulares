@@ -93,11 +93,16 @@ export default function Alumnos() {
         : await supabase.auth.signUp({ email: form.email, password: form.password });
 
       if (authErr) {
-        // Fallback: create without auth link
-        console.warn('Auth creation issue, creating alumno record only:', authErr);
+        alert('Error al crear el usuario en Auth: ' + authErr.message);
+        return;
       }
 
-      const userId = authData?.user?.id || null;
+      const userId = authData?.user?.id;
+
+      if (!userId) {
+         alert('Error crítico: No se pudo obtener el ID del usuario creado.');
+         return;
+      }
 
       await supabase.from('alumnos').insert({
         nombre: form.nombre, apellido: form.apellido,

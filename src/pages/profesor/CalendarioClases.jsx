@@ -80,12 +80,8 @@ export default function CalendarioClases() {
   }
 
   async function marcarDictada(clase) {
-    // Calculate cost
-    const precio = preciosConfig.find(p => p.nivel_aprendizaje_id == clase.nivel_aprendizaje_id);
-    const costo = (precio?.precio_por_hora || 0) * clase.duracion_horas;
-
     await supabase.from('clases')
-      .update({ estado: 'DICTADA', costo_calculado: costo })
+      .update({ estado: 'DICTADA' })
       .eq('id', clase.id);
 
     loadClases();

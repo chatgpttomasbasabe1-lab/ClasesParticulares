@@ -97,12 +97,33 @@ export default function Facturacion() {
       totalPagado += parseFloat(sp.monto);
     }
 
-    // Apply señas
-    totalPagado += montoSenas;
+    let montoNecesario = claseParaPagar.costo_calculado - totalPagado;
+
+    // Apply señas solo hasta cubrir el montoNecesario
     for (const sena of senasDisponibles) {
-      await supabase.from('senas').update({
-        aplicada: true, clase_id_aplicada: claseParaPagar.id
-      }).eq('id', sena.id);
+      if (montoNecesario <= 0) break;
+      
+      if (sena.monto <= montoNecesario) {
+        await supabase.from('senas').update({
+          aplicada: true, clase_id_aplicada: claseParaPagar.id
+        }).eq('id', sena.id);
+        totalPagado += sena.monto;
+        montoNecesario -= sena.monto;
+      } else {
+        // Consumir parcialmente y generar nueva seña por el saldo a favor
+        await supabase.from('senas').update({
+          aplicada: true, clase_id_aplicada: claseParaPagar.id
+        }).eq('id', sena.id);
+        
+        await supabase.from('senas').insert({
+          alumno_id: selectedAlumno.id,
+          monto: sena.monto - montoNecesario,
+          fecha: hoy,
+          aplicada: false
+        });
+        totalPagado += montoNecesario;
+        montoNecesario = 0;
+      }
     }
 
     // Check if debt needed
