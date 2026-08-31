@@ -19,14 +19,31 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
   const [expanded, setExpanded] = useState({});
   const [expandedModulos, setExpandedModulos] = useState({});
   const [uploading, setUploading] = useState(false);
+  const [nivelesAprendizaje, setNivelesAprendizaje] = useState([]);
+  const [selectedNA, setSelectedNA] = useState(null);
 
   useEffect(() => {
-    if (profile?.nivel_aprendizaje_id) loadContenido();
+    if (profile?.id) loadNiveles();
   }, [profile]);
 
+  useEffect(() => {
+    if (selectedNA) loadContenido();
+  }, [selectedNA]);
+
+  async function loadNiveles() {
+    const { data } = await supabase.from('alumno_niveles_aprendizaje')
+      .select('nivel_aprendizaje_id, niveles_aprendizaje(*, materias(*), niveles_educativos(*))')
+      .eq('alumno_id', profile.id);
+
+    const nas = (data || []).map(d => d.niveles_aprendizaje).filter(Boolean);
+    setNivelesAprendizaje(nas);
+    if (nas.length > 0) setSelectedNA(nas[0]);
+  }
+
   async function loadContenido() {
+    if (!selectedNA) return;
     const { data: apts } = await supabase.from('apartados')
-      .select('*').eq('nivel_aprendizaje_id', profile.nivel_aprendizaje_id).order('nombre');
+      .select('*').eq('nivel_aprendizaje_id', selectedNA.id).order('nombre');
     const aptsData = apts || [];
     setApartados(aptsData);
 
@@ -230,10 +247,32 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
     <div className="fade-in">
       <div className="page-header">
         <h1>Mi Contenido</h1>
-        <p>Material de estudio asignado a tu nivel. Marcá lo que completaste.</p>
+        <p>Material de estudio, apuntes y ejercicios de tus materias.</p>
       </div>
 
-      {apartados.length === 0 ? (
+      <div className="tabs" style={{ marginBottom: 24, flexWrap: 'wrap' }}>
+        {nivelesAprendizaje.map(na => (
+          <button
+            key={na.id}
+            className={`tab ${selectedNA?.id === na.id ? 'active' : ''}`}
+            onClick={() => setSelectedNA(na)}
+          >
+            {na.materias?.nombre} - {na.niveles_educativos?.nombre}
+          </button>
+        ))}
+      </div>
+
+      {!selectedNA && (
+        <div className="card">
+          <div className="empty-state">
+            <BookOpen size={48} />
+            <h3>Sin materias</h3>
+            <p>Aún no tienes materias asignadas.</p>
+          </div>
+        </div>
+      )}
+
+      {selectedNA && apartados.length === 0 ? (
         <div className="card">
           <div className="empty-state">
             <FolderOpen size={48} />
@@ -242,27 +281,34 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
           </div>
         </div>
       ) : (
-        <div className="content-tree">
-          {apartados.map(apt => (
-            <div className="tree-item" key={apt.id}>
-              <div className="tree-item-header" onClick={() => setExpanded(prev => ({ ...prev, [apt.id]: !prev[apt.id] }))}>
-                {expanded[apt.id] ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
-                <FolderOpen size={18} style={{ color: 'var(--accent-primary)' }} />
-                <span style={{ flex: 1, fontWeight: 600 }}>{apt.nombre}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                  {(modulos[apt.id] || []).filter(m => progreso[m.id]?.completado).length}/
-                  {(modulos[apt.id] || []).length} completados
-                </span>
-              </div>
-
-              {expanded[apt.id] && (
-                <div className="tree-item-children">
-                  {(modulos[apt.id] || []).map(mod => renderModulo(mod))}
+        selectedNA && apartados.length > 0 && (
+          <div className="content-tree">
+            {apartados.map(apt => (
+              <div className="tree-item" key={apt.id}>
+                <div className="tree-item-header" onClick={() => setExpanded(prev => ({ ...prev, [apt.id]: !prev[apt.id] }))}>
+                  {expanded[apt.id] ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                  <FolderOpen size={18} style={{ color: 'var(--accent-primary)' }} />
+                  <span style={{ flex: 1, fontWeight: 600 }}>{apt.nombre}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                    {(modulos[apt.id] || []).length} módulos
+                  </span>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
+
+                {expanded[apt.id] && (
+                  <div className="tree-item-children">
+                    {(modulos[apt.id] || []).length === 0 ? (
+                      <p style={{ fontSize: 13, color: 'var(--text-tertiary)', fontStyle: 'italic', padding: 8 }}>
+                        Apartado vacío
+                      </p>
+                    ) : (
+                      (modulos[apt.id] || []).map(mod => renderModulo(mod))
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
