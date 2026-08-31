@@ -146,7 +146,7 @@ export default function CalendarioClases() {
           const dayClases = clases.filter(c => c.fecha === dateStr);
 
           return (
-            <div key={date.toString()} className={calendar-cell } onClick={() => openNewClase(date)}>
+            <div key={date.toString()} className={`calendar-cell${isToday ? ' today' : ''}`} onClick={() => openNewClase(date)}>
               <div className="calendar-cell-header">
                 <span style={{ 
                   width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -162,7 +162,7 @@ export default function CalendarioClases() {
               
               {dayClases.map(c => (
                 <div key={c.id} 
-                  className={calendar-event }
+                  className={`calendar-event ${c.estado === 'DICTADA' ? 'done' : c.estado === 'CANCELADA' ? 'cancelled' : ''}`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   {c.hora} - {c.alumnos?.nombre}
