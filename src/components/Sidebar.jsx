@@ -7,7 +7,7 @@ import {
   ChevronRight, Settings, FileText, Home
 } from 'lucide-react';
 
-import logoImg from '../assets/logo.png';
+import logoImg from '../assets/logo_tb.png';
 
 import { Eye } from 'lucide-react';
 
