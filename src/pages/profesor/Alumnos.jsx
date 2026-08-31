@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, supabaseAdmin } from '../../lib/supabase';
 import Modal from '../../components/Modal';
 import {
   Plus, Edit2, Trash2, Users, Search, UserPlus,
@@ -126,11 +126,9 @@ export default function Alumnos() {
         alert('Email y contraseña son requeridos para crear un alumno.');
         return;
       }
-      const { data: authData, error: authErr } = await supabase.auth.admin
-        ? await supabase.auth.admin.createUser({
+      const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.createUser({
             email: form.email, password: form.password, email_confirm: true
-          })
-        : await supabase.auth.signUp({ email: form.email, password: form.password });
+          });
 
       if (authErr) {
         alert('Error al crear el usuario en Auth: ' + authErr.message);
@@ -143,7 +141,15 @@ export default function Alumnos() {
          return;
       }
 
-      const { data: insertData } = await supabase.from('alumnos').insert({
+      // Crear perfil en tabla profiles con rol alumno
+      await supabaseAdmin.from('profiles').insert({
+        id: userId,
+        nombre: form.nombre,
+        email: form.email,
+        rol: 'alumno'
+      });
+
+      const { data: insertData } = await supabaseAdmin.from('alumnos').insert({
         nombre: form.nombre, apellido: form.apellido,
         telefono: form.telefono, email: form.email,
         direccion: form.direccion, nivel_aprendizaje_id: primaryNaId,
@@ -153,6 +159,7 @@ export default function Alumnos() {
       if (insertData && insertData.length > 0) {
         alumnoId = insertData[0].id;
       }
+
     }
 
     if (alumnoId) {
