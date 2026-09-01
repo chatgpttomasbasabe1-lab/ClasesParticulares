@@ -85,6 +85,16 @@ export default function ChatProfesor() {
       leido: false
     });
 
+    // Enviar notificacion push al alumno
+    supabase.functions.invoke('send-push', {
+      body: {
+        user_id: selectedAlumno.id,
+        title: 'Nuevo mensaje de tu profesor',
+        body: newMsg.trim(),
+        url: '/alumno/chat'
+      }
+    });
+
     setNewMsg('');
   }
 
