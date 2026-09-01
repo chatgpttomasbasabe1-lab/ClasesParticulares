@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import Modal from '../../components/Modal';
 import { HelpCircle, MessageCircle, Send, ChevronDown, ChevronRight } from 'lucide-react';
+import { notifyUser } from '../../lib/notifications';
 
 export default function ForoProfesor() {
   const [searchParams] = useSearchParams();
@@ -88,6 +89,15 @@ export default function ForoProfesor() {
 
     setReplyText('');
     loadRespuestas(consultaId);
+
+    // Notificar al creador de la consulta
+    const consulta = consultas.find(c => c.id === consultaId);
+    if (consulta) {
+      const { data: al } = await supabase.from('alumnos').select('user_id').eq('id', consulta.alumno_id).single();
+      if (al && al.user_id) {
+        notifyUser(al.user_id, 'Respuesta en el foro', 'El profesor respondió a tu consulta.', '/alumno/foro');
+      }
+    }
   }
 
   return (

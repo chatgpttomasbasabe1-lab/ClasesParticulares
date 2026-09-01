@@ -95,3 +95,52 @@ export function sendLocalNotification(title, body, url = '/') {
   });
   n.onclick = () => { window.focus(); n.close(); };
 }
+
+// ===== CENTRALIZED PUSH NOTIFICATION SENDERS =====
+import { supabase } from './supabase';
+
+/**
+ * Enviar notificación push a un usuario específico (por su user_id de auth).
+ * Funciona aunque la app esté cerrada.
+ */
+export async function notifyUser(userId, title, body, url = '/') {
+  try {
+    console.log('[Push] Enviando notificación a usuario:', userId, title);
+    const { data, error } = await supabase.functions.invoke('send-push', {
+      body: { user_id: userId, title, body, url }
+    });
+    if (error) {
+      console.error('[Push] Error al invocar send-push:', error);
+    } else {
+      console.log('[Push] Notificación enviada OK:', data);
+    }
+    return !error;
+  } catch (err) {
+    console.error('[Push] Excepción al enviar notificación:', err);
+    return false;
+  }
+}
+
+/**
+ * Enviar notificación push al profesor.
+ * Busca al primer usuario con rol 'profesor' en la tabla perfiles.
+ */
+export async function notifyProfesor(title, body, url = '/') {
+  try {
+    const { data: profs, error: profErr } = await supabase
+      .from('perfiles')
+      .select('id')
+      .eq('rol', 'profesor')
+      .limit(1);
+
+    if (profErr || !profs || profs.length === 0) {
+      console.warn('[Push] No se encontró profesor para notificar:', profErr);
+      return false;
+    }
+
+    return await notifyUser(profs[0].id, title, body, url);
+  } catch (err) {
+    console.error('[Push] Error buscando profesor:', err);
+    return false;
+  }
+}

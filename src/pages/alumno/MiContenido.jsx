@@ -6,6 +6,7 @@ import {
   ChevronDown, ChevronRight, FolderOpen, FileText, File,
   Download, Upload, CheckCircle, Circle, CheckSquare, MessageSquare, BookOpen
 } from 'lucide-react';
+import { notifyProfesor } from '../../lib/notifications';
 
 export default function MiContenido({ previewProfile, isPreview = false }) {
   const authContext = useAuth();
@@ -140,6 +141,13 @@ export default function MiContenido({ previewProfile, isPreview = false }) {
 
     setUploading(false);
     alert('¡Entrega subida exitosamente!');
+    
+    // Notificar al profesor de la entrega
+    notifyProfesor(
+      'Nueva entrega recibida',
+      `${profile.nombre || 'Un alumno'} entregó una tarea: ${file.name}`,
+      '/profesor/alumnos'
+    );
   }
 
   function toggleModulo(id) {

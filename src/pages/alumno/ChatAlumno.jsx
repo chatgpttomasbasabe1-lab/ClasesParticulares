@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Send, MessageSquare } from 'lucide-react';
+import { notifyProfesor } from '../../lib/notifications';
 
 export default function ChatAlumno() {
   const { profile } = useAuth();
@@ -60,18 +61,8 @@ export default function ChatAlumno() {
       leido: false
     });
 
-    // Enviar notificacion push al profesor
-    const { data: profs } = await supabase.from('perfiles').select('id').eq('rol', 'profesor').limit(1);
-    if (profs && profs.length > 0) {
-      supabase.functions.invoke('send-push', {
-        body: {
-          user_id: profs[0].id,
-          title: `Mensaje de ${profile.nombre}`,
-          body: newMsg.trim(),
-          url: '/profesor/chat'
-        }
-      });
-    }
+    // Enviar notificación push al profesor
+    notifyProfesor(`Mensaje de ${profile.nombre || 'un alumno'}`, newMsg.trim(), '/profesor/chat');
 
     setNewMsg('');
   }

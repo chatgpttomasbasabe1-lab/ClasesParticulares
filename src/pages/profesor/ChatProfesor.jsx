@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../context/AuthContext';
 import { Send, MessageSquare } from 'lucide-react';
+import { notifyUser } from '../../lib/notifications';
 
 export default function ChatProfesor() {
   const { user } = useAuth();
@@ -85,15 +86,8 @@ export default function ChatProfesor() {
       leido: false
     });
 
-    // Enviar notificacion push al alumno
-    supabase.functions.invoke('send-push', {
-      body: {
-        user_id: selectedAlumno.id,
-        title: 'Nuevo mensaje de tu profesor',
-        body: newMsg.trim(),
-        url: '/alumno/chat'
-      }
-    });
+    // Enviar notificación push al alumno
+    notifyUser(selectedAlumno.user_id || selectedAlumno.id, 'Nuevo mensaje de tu profesor', newMsg.trim(), '/alumno/chat');
 
     setNewMsg('');
   }

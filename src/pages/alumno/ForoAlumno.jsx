@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import Modal from '../../components/Modal';
 import { HelpCircle, MessageCircle, Send, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import { notifyProfesor } from '../../lib/notifications';
 
 export default function ForoAlumno() {
   const { profile } = useAuth();
@@ -133,6 +134,13 @@ export default function ForoAlumno() {
     setModalOpen(false);
     setForm({ titulo: '', contenido: '', modulo_id: '', nivel_aprendizaje_id: '' });
     loadConsultas();
+
+    // Notificar al profesor de la nueva consulta
+    notifyProfesor(
+      'Nueva consulta en el foro',
+      `${profile.nombre || 'Un alumno'} preguntó: ${form.titulo}`,
+      '/profesor/foro'
+    );
   }
 
   const consultasFiltradas = consultas.filter(c => 

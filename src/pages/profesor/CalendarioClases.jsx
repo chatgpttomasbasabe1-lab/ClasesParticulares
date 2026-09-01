@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Plus, ChevronLeft, ChevronRight, Calendar as CalIcon, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { notifyUser } from '../../lib/notifications';
 
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -146,6 +147,17 @@ export default function CalendarioClases() {
 
     setModalOpen(false);
     loadClases();
+
+    // Notificar al alumno de la nueva clase
+    const alumnoSel = alumnos.find(a => a.id === form.alumno_id);
+    if (alumnoSel) {
+      notifyUser(
+        alumnoSel.user_id || alumnoSel.id,
+        'Nueva clase agendada',
+        `Tenés una clase el ${form.fecha} a las ${form.hora_inicio}`,
+        '/alumno/contenido'
+      );
+    }
   }
 
   async function marcarDictada(clase) {
