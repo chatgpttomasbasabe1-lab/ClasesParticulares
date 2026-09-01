@@ -54,17 +54,20 @@ export default function ChatAlumno() {
     e.preventDefault();
     if (!newMsg.trim()) return;
 
+    const texto = newMsg.trim();
+    setNewMsg('');
+
     await supabase.from('mensajes_chat').insert({
       alumno_id: profile.id,
-      contenido: newMsg.trim(),
+      contenido: texto,
       es_de_profesor: false,
       leido: false
     });
 
-    // Enviar notificación push al profesor
-    notifyProfesor(`Mensaje de ${profile.nombre || 'un alumno'}`, newMsg.trim(), '/profesor/chat');
+    loadMessages(); // Refrescar lista localmente
 
-    setNewMsg('');
+    // Enviar notificación push al profesor
+    notifyProfesor(`Mensaje de ${profile.nombre || 'un alumno'}`, texto, '/profesor/chat');
   }
 
   return (

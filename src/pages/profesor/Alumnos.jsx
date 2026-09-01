@@ -141,8 +141,8 @@ export default function Alumnos() {
          return;
       }
 
-      // Crear perfil en tabla profiles con rol alumno
-      await supabaseAdmin.from('profiles').insert({
+      // Crear perfil en tabla perfiles con rol alumno
+      await supabaseAdmin.from('perfiles').insert({
         id: userId,
         nombre: form.nombre,
         email: form.email,

@@ -79,17 +79,20 @@ export default function ChatProfesor() {
     e.preventDefault();
     if (!newMsg.trim() || !selectedAlumno) return;
 
+    const texto = newMsg.trim();
+    setNewMsg(''); // Limpiar input instantáneamente para mejor UX
+
     await supabase.from('mensajes_chat').insert({
       alumno_id: selectedAlumno.id,
-      contenido: newMsg.trim(),
+      contenido: texto,
       es_de_profesor: true,
       leido: false
     });
 
-    // Enviar notificación push al alumno
-    notifyUser(selectedAlumno.user_id || selectedAlumno.id, 'Nuevo mensaje de tu profesor', newMsg.trim(), '/alumno/chat');
+    loadMessages(); // Refrescar lista de mensajes localmente por si Realtime falla
 
-    setNewMsg('');
+    // Enviar notificación push al alumno
+    notifyUser(selectedAlumno.user_id || selectedAlumno.id, 'Nuevo mensaje de tu profesor', texto, '/alumno/chat');
   }
 
   return (
