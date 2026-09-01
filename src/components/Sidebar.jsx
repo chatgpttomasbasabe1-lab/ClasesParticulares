@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, GraduationCap, BookOpen, Users, Calendar,
   DollarSign, MessageSquare, HelpCircle, LogOut, ChevronLeft,
-  ChevronRight, FileText, Menu, X, TrendingUp
+  ChevronRight, FileText, Menu, X, TrendingUp, Settings
 } from 'lucide-react';
 import { Eye } from 'lucide-react';
 import logoImg from '../assets/logo_tb.png';
@@ -21,6 +21,7 @@ const profesorLinks = [
   { to: '/profesor/chat', icon: MessageSquare, label: 'Chat' },
   { to: '/profesor/foro', icon: HelpCircle, label: 'Foro' },
   { to: '/profesor/vista-alumno', icon: Eye, label: 'Vista Alumno' },
+  { to: '/configuracion', icon: Settings, label: 'Configuración' },
 ];
 
 const alumnoLinks = [
@@ -28,6 +29,7 @@ const alumnoLinks = [
   { to: '/alumno/progreso', icon: TrendingUp, label: 'Progreso' },
   { to: '/alumno/chat', icon: MessageSquare, label: 'Chat' },
   { to: '/alumno/foro', icon: HelpCircle, label: 'Foro' },
+  { to: '/configuracion', icon: Settings, label: 'Configuración' },
 ];
 
 // Bottom nav shows max 5 items for mobile

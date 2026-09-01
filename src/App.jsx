@@ -17,6 +17,7 @@ import MiContenido from './pages/alumno/MiContenido';
 import MiProgreso from './pages/alumno/MiProgreso';
 import ChatAlumno from './pages/alumno/ChatAlumno';
 import ForoAlumno from './pages/alumno/ForoAlumno';
+import Configuracion from './pages/Configuracion';
 import './index.css';
 
 function ProtectedRoute({ children, allowedRole }) {
@@ -140,6 +141,12 @@ export default function App() {
           <Route path="/alumno/foro" element={
             <ProtectedRoute allowedRole="alumno">
               <AppLayout><ForoAlumno /></AppLayout>
+            </ProtectedRoute>
+          } />
+
+          <Route path="/configuracion" element={
+            <ProtectedRoute>
+              <AppLayout><Configuracion /></AppLayout>
             </ProtectedRoute>
           } />
 
