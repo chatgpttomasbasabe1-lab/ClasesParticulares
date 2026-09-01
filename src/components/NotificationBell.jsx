@@ -61,11 +61,11 @@ export default function NotificationBell() {
             onClick={() => setShowPanel(false)}
           />
           <div style={{
-            position: 'absolute', right: 0, top: '110%',
+            position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)',
             background: 'var(--bg-secondary)', border: '1px solid var(--border-secondary)',
-            borderRadius: 'var(--radius-md)', padding: 20, width: 280,
+            borderRadius: 'var(--radius-md)', padding: 20, width: 320, maxWidth: '90vw',
             zIndex: 301, boxShadow: 'var(--shadow-lg)',
-            animation: 'slideUp 150ms ease-out'
+            animation: 'scaleIn 150ms ease-out'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
               <strong style={{ fontSize: 14 }}>Notificaciones Push</strong>

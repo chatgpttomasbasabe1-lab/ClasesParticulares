@@ -140,18 +140,23 @@ export default function Sidebar() {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="nav-item" style={{ marginBottom: 8 }}>
+          <div className="nav-item" style={{ marginBottom: 8, paddingRight: 8 }}>
             <div className="chat-avatar" style={{ width: 32, height: 32, fontSize: 12 }}>
               {profile?.nombre?.[0] || profile?.email?.[0] || 'U'}
             </div>
             {!collapsed && (
-              <div style={{ overflow: 'hidden' }}>
+              <div style={{ overflow: 'hidden', flex: 1 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {profile?.nombre || profile?.email || 'Usuario'}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                   {isProfesor ? 'Profesor' : 'Alumno'}
                 </div>
+              </div>
+            )}
+            {!collapsed && (
+              <div style={{ marginLeft: 'auto' }}>
+                <NotificationBell />
               </div>
             )}
           </div>
